@@ -24,10 +24,10 @@ enum class Registers : int {
   RIP,
   RegisterCount
 };
-
+// 这里用到了context.S中的部分
 extern "C" {
 void coroutine_entry();
-void coroutine_switch(uint64_t *save, uint64_t *restore);
+void coroutine_switch(uint64_t *save, uint64_t *restore);   // 
 }
 
 struct basic_context {
@@ -40,7 +40,7 @@ struct basic_context {
   std::function<bool()> ready_func;
 
   basic_context(uint64_t stack_size)
-      : finished(false), ready(true), stack_size(stack_size) {
+      : finished(false), ready(true), stack_size(stack_size) {    //[*]协程的“栈”是虚拟栈，其实是在堆上申请的
     stack = new uint64_t[stack_size];
 
     // TODO: Task 1
@@ -53,10 +53,11 @@ struct basic_context {
 
     callee_registers[(int)Registers::RSP] = rsp;
     // 协程入口是 coroutine_entry
-    callee_registers[(int)Registers::RIP] = (uint64_t)coroutine_entry;
+    callee_registers[(int)Registers::RIP] = (uint64_t)coroutine_entry;    // 这里相当于一个label,跳转到开始那里
     // 设置 r12 寄存器为 coroutine_main 的地址
     callee_registers[(int)Registers::R12] = (uint64_t)coroutine_main;
     // 设置 r13 寄存器，用于 coroutine_main 的参数
+    // [*]这是执行的那个函数的参数，而不是switch_context的参数
     callee_registers[(int)Registers::R13] = (uint64_t)this;
   }
 
@@ -71,7 +72,8 @@ struct basic_context {
 void coroutine_main(struct basic_context *context) {
   context->run();
   context->finished = true;
-  coroutine_switch(context->callee_registers, context->caller_registers);
+  coroutine_switch(context->callee_registers, context->caller_registers); 
+  //[*]当正常 run完成之后，标记finished,并且将context切换为调用者
 
   // unreachable
   assert(false);
@@ -137,12 +139,16 @@ struct coroutine_context : public basic_context {
    * @brief 恢复协程函数运行。
    * TODO: Task 1
    * 你需要保存 callee-saved 寄存器，并且设置协程函数栈帧，然后将 rip 恢复到协程
-   * yield 之后所需要执行的指令地址。
+   * yield 之后所需要执行的指令地址
    */
   virtual void resume() {
     // 调用 coroutine_switch
     // 在汇编中保存 callee-saved 寄存器，设置协程函数栈帧，然后将 rip 恢复到协程 yield 之后所需要执行的指令地址。
+    coroutine_switch(caller_registers,callee_registers);
   }
+  // [*]目前并没有关于这个函数的引用，因此应该是需要自己增加对它的ref
+  // [*]但应该并不是直接在yield中使用，因为那里是暂停运行，这里是恢复运行
 
   virtual void run() { CALL(f, args); }
+  // [*]run函数的本质就是调用
 };

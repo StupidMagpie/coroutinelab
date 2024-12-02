@@ -13,12 +13,15 @@ auto get_time() { return std::chrono::system_clock::now(); }
  * 协程主动暂停执行，保存协程的寄存器和栈帧。
  * 将上下文转换至 coroutine_pool.serial_execute_all() 中的上下文进行重新的
  * schedule 调用。
+ * [*] 应该是在serial_execute_all中调用了协程，保存了当时的上下文；这里再将其取出来
  */
 void yield() {
   if (!g_pool->is_parallel) {
-    // 从 g_pool 中获取当前协程状态
+    // 从 g_pool 中获取当前协程状态 [*]在序列化执行模式中，执行完一个后取出下一个
     auto context = g_pool->coroutines[g_pool->context_id];
-
+    // [*]注意只是暂停，并不是结束！以后还会通过resume来恢复执行
+    // [*]这里的context是正在运行的协程上下文
+    coroutine_switch(context->callee_registers,context->caller_registers);
     // 调用 coroutine_switch 切换到 coroutine_pool 上下文
   }
 }

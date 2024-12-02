@@ -26,7 +26,7 @@ struct coroutine_pool {
 
   // add coroutine to pool
   template <typename F, typename... Args>
-  void new_coroutine(F f, Args... args) {
+  void new_coroutine(F f, Args... args) {       // 第一个参数：协程要执行的函数；后面的变长参数代表这个函数的参数
     coroutines.push_back(new coroutine_context(f, args...));
   }
 
@@ -37,7 +37,7 @@ struct coroutine_pool {
     g_pool = this;
     is_parallel = true;
     std::vector<std::thread> threads;
-    for (auto p : coroutines) {
+    for (auto p : coroutines) {     // 这里每一个p都是basic_context类
       threads.emplace_back([p]() { p->run(); });
     }
 
@@ -56,13 +56,28 @@ struct coroutine_pool {
    *
    * 当所有协程函数都执行完毕后，退出该函数。
    */
+
+  // [*]将协程池管理函数也当作一个特殊的“协程”，它也会中断（对应协程的yield())
   void serial_execute_all() {
     is_parallel = false;
     g_pool = this;
-
-    for (auto context : coroutines) {
-      delete context;
+    bool hasUnfinised =true;
+    while(hasUnfinised){
+      hasUnfinised=false;
+      for (auto context : coroutines) {
+        // [*]如何通过一个context执行其协程 -> 查找context.h
+        /*******/
+        // [*]是否需要添加一个条件？
+        if(!context->finished){
+          hasUnfinised=true;
+          //[*]每一个context都是一个指针
+          context->resume();
+          // [*]是否需要从协程池中删除这个context?
+          /*******/
+        }
+      }
     }
+    
     coroutines.clear();
   }
 };
