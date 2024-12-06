@@ -29,11 +29,11 @@ coroutine_switch:
     movq %r13,  96(%rdi)
     movq %r14,  104(%rdi)
     movq %r15,  112(%rdi)
-    movq $.coroutine_ret, 120(%rdi)
+    movq $.coroutine_ret , 120(%rdi)
     # 疑问：这里使用rip真的没问题吗？
     movq (%rsi)   ,%rax 
     movq 8(%rsi)  ,%rdi 
-    movq 16(%rsi) ,%rsi 
+    #movq 16(%rsi) ,%rsi 
     movq 24(%rsi) ,%rdx 
     movq 32(%rsi) ,%r8  
     movq 40(%rsi) ,%r9  
@@ -47,8 +47,7 @@ coroutine_switch:
     movq 104(%rsi),%r14 
     movq 112(%rsi),%r15 
     # 是否需要保存部分寄存器？
-    pushq 120(%rsi)
-    ret
+    jmpq *120(%rsi)
 
 .coroutine_ret:
     ret

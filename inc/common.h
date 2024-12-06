@@ -36,19 +36,25 @@ void yield() {
  *  2. yield 协程。
  *  3. 在至少 @param ms 毫秒之后将协程置为可用状态。
  */
+
 void sleep(uint64_t ms) {
-  if (g_pool->is_parallel) {
-    auto cur = get_time();
+  auto cur = get_time();
+  if (g_pool->is_parallel) {    // [*]对于并发执行，并不需要主动阻塞，一直执行完后线程会自动汇合
     while (
         std::chrono::duration_cast<std::chrono::milliseconds>(get_time() - cur)
             .count() < ms)
       ;
-  } else {
+  } 
+  else {
     // 从 g_pool 中获取当前协程状态
-
     // 获取当前时间，更新 ready_func
     // ready_func：检查当前时间，如果已经超时，则返回 true
-
     // 调用 coroutine_switch 切换到 coroutine_pool 上下文
+    auto context = g_pool->coroutines[g_pool->context_id];
+    context->ready=false;
+    context->ready_func= [&cur,&ms](){    //[*]使用lambda表达式，其中[]为捕获列表，将外界的一部分变量捕获，这样就能在lambda内部使用
+      return (std::chrono::duration_cast<std::chrono::milliseconds>(get_time() - cur).count() >= ms);
+    };
+    yield();
   }
 }

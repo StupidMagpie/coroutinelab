@@ -61,19 +61,35 @@ struct coroutine_pool {
   void serial_execute_all() {
     is_parallel = false;
     g_pool = this;
-    bool hasUnfinised =true;
-    while(hasUnfinised){
-      hasUnfinised=false;
+    int jobNum = coroutines.size();
+    while(jobNum>0){
+      int count=0;
       for (auto context : coroutines) {
         // [*]如何通过一个context执行其协程 -> 查找context.h
         /*******/
         // [*]是否需要添加一个条件？
         if(!context->finished){
-          hasUnfinised=true;
-          //[*]每一个context都是一个指针
-          context->resume();
-          // [*]是否需要从协程池中删除这个context?
-          /*******/
+          if(context->ready){
+            //[*]每一个context都是一个指针
+            context_id = count;
+            context->resume();
+            // [*]是否需要从协程池中删除这个context?
+            /*******/
+          }
+          else{
+            if(context->ready_func()){
+              context->ready=true;
+              context_id = count;
+              context->resume();
+            }
+          }
+        }
+        count++;
+      }
+      jobNum=0;
+      for (auto tmpcontext : coroutines){
+        if(!tmpcontext->finished){
+          jobNum++;
         }
       }
     }
