@@ -27,7 +27,8 @@ enum class Registers : int {
 // 这里用到了context.S中的部分
 extern "C" {
 void coroutine_entry();
-void coroutine_switch(uint64_t *save, uint64_t *restore);   // 
+void coroutine_switch(uint64_t *save, uint64_t *restore);
+void context_ret();
 }
 
 struct basic_context {
@@ -72,6 +73,7 @@ struct basic_context {
 void coroutine_main(struct basic_context *context) {
   context->run();
   context->finished = true;
+  context->caller_registers[(int)Registers::RIP] = (uint64_t)context_ret;
   coroutine_switch(context->callee_registers, context->caller_registers); 
   //[*]当正常 run完成之后，标记finished,并且将context切换为调用者
 
@@ -110,7 +112,8 @@ extern __thread basic_context *g_current_context;
  * 协程运行时资源管理。存储了协程函数，以及协程函数的运行时栈即寄存器内容等。
  *
  * @tparam F 协程函数类
- * @tparam Args 协程函数所需要的参数列表
+ * @tparam Args 协程函数所需要的参数列表    __builtin_prefetch(&table[probe]);
+
  * 在当前情况下，协程函数支支持展开至多 7 个参数。
  * 如果需要更多的参数需要
  *   1. 参考修改 CALL 的宏定义以及添加对应的 EXPAND_CALL_X 的宏定义。
@@ -143,7 +146,8 @@ struct coroutine_context : public basic_context {
    */
   virtual void resume() {
     // 调用 coroutine_switch
-    // 在汇编中保存 callee-saved 寄存器，设置协程函数栈帧，然后将 rip 恢复到协程 yield 之后所需要执行的指令地址。
+    // 在汇编中保存 callee-saved 寄存器，设置协程函数。栈帧，然后将 rip 恢复到协程 yield 之后所需要执行的指令地址
+    caller_registers[(int)Registers::RIP] = (uint64_t)context_ret;
     coroutine_switch(caller_registers,callee_registers);
   }
   // [*]目前并没有关于这个函数的引用，因此应该是需要自己增加对它的ref

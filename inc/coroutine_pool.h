@@ -3,7 +3,7 @@
 #include <memory>
 #include <thread>
 #include <vector>
-
+#include <cstdio>
 struct coroutine_pool;
 extern coroutine_pool *g_pool;
 
@@ -62,19 +62,21 @@ struct coroutine_pool {
     is_parallel = false;
     g_pool = this;
     int jobNum = coroutines.size();
+    
     while(jobNum>0){
       int count=0;
+      jobNum=0;
       for (auto context : coroutines) {
         // [*]如何通过一个context执行其协程 -> 查找context.h
-        /*******/
+
         // [*]是否需要添加一个条件？
         if(!context->finished){
+          jobNum++;
           if(context->ready){
             //[*]每一个context都是一个指针
             context_id = count;
             context->resume();
             // [*]是否需要从协程池中删除这个context?
-            /*******/
           }
           else{
             if(context->ready_func()){
@@ -86,14 +88,45 @@ struct coroutine_pool {
         }
         count++;
       }
-      jobNum=0;
-      for (auto tmpcontext : coroutines){
-        if(!tmpcontext->finished){
-          jobNum++;
+    }
+
+    
+    /*
+    int jobSize;
+    int index;
+    int count;
+    while(jobSize){
+      count=0;
+      index=0;
+      jobSize = coroutines.size();
+      while(index < jobSize){
+        auto context = coroutines[index];
+        if(!context->finished){
+          if(context->ready){
+            //[*]每一个context都是一个指针
+            context_id = count;
+            context->resume();
+            // [*]是否需要从协程池中删除这个context?
+          }
+          else{
+            if(context->ready_func()){
+              context->ready=true;
+              context_id = count;
+              context->resume();
+            }
+          }
+          index++;
+          count++;
+        }
+        else{
+          //已经完成就将其删除
+          coroutines.erase(coroutines.begin()+index);
+          jobSize--;
+          //此时index不用增加，count也不用增加
         }
       }
     }
-    
+    */
     coroutines.clear();
   }
 };

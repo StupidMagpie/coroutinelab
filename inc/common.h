@@ -3,7 +3,8 @@
 #include "coroutine_pool.h"
 #include <cstdlib>
 
-// 获取当前时间
+// 获取当前时间    __builtin_prefetch(&table[probe]);
+
 auto get_time() { return std::chrono::system_clock::now(); }
 
 /**
@@ -21,6 +22,7 @@ void yield() {
     auto context = g_pool->coroutines[g_pool->context_id];
     // [*]注意只是暂停，并不是结束！以后还会通过resume来恢复执行
     // [*]这里的context是正在运行的协程上下文
+    context->callee_registers[(int)Registers::RIP] = (uint64_t)context_ret;
     coroutine_switch(context->callee_registers,context->caller_registers);
     // 调用 coroutine_switch 切换到 coroutine_pool 上下文
   }

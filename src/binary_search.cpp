@@ -15,7 +15,8 @@ void lookup_coroutine(const uint32_t *table, size_t size, uint32_t value,
   while ((size / 2) > 0) {
     size_t half = size / 2;
     size_t probe = low + half;
-
+    __builtin_prefetch(&table[probe]);
+    yield();
     // TODO: Task 3
     // 使用 __builtin_prefetch 预取容易产生缓存缺失的内存
     // 并调用 yield
@@ -28,7 +29,7 @@ void lookup_coroutine(const uint32_t *table, size_t size, uint32_t value,
   }
   *result = low;
 }
-
+//[*]从已经排序好的数组中查找某一个值
 void lookup(const uint32_t *table, size_t size, uint32_t value,
             uint32_t *result) {
   size_t low = 0;
@@ -43,7 +44,7 @@ void lookup(const uint32_t *table, size_t size, uint32_t value,
   }
   *result = low;
 }
-
+//[*]朴素二分法
 uint32_t *naive(int m, int n, int batch, size_t log2_bytes, uint32_t *data) {
   std::uniform_int_distribution<uint32_t> distr;
   std::minstd_rand eng(0);
@@ -55,7 +56,7 @@ uint32_t *naive(int m, int n, int batch, size_t log2_bytes, uint32_t *data) {
   }
 
   auto time_begin = get_time();
-
+  //[*]每次查找的都是随机数字，查找m次（mod n，其中n就是数据表的大小）
   for (int i = 0; i < m; i++) {
     uint32_t key = keys[i];
     lookup(data, n, key, &res[i]);
@@ -69,7 +70,7 @@ uint32_t *naive(int m, int n, int batch, size_t log2_bytes, uint32_t *data) {
          (double)time_elapsed / m, (double)time_elapsed / m / log2_bytes);
   return res;
 }
-
+//[*]使用协程
 uint32_t *coroutine_batched(int m, int n, int batch, size_t log2_bytes,
                        uint32_t *data) {
   std::uniform_int_distribution<uint32_t> distr;
@@ -87,7 +88,7 @@ uint32_t *coroutine_batched(int m, int n, int batch, size_t log2_bytes,
   assert(m % batch == 0);
 
   coroutine_pool pool;
-  for (int i = 0; i < m; i += batch) {
+  for (int i = 0; i < m; i += batch) {    //[*]根据代码特征分析，结合前面的 m % batch逻辑，可以才出来就是将m次单个查找变成每次16个协程的查找，节省次数
     for (int j = 0; j < batch; j++) {
       uint32_t key = keys[i + j];
       pool.new_coroutine(lookup_coroutine, data, n, key, &res[i + j]);

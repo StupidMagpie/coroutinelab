@@ -4,7 +4,8 @@ coroutine_entry:
     callq *%r12
 
 .global coroutine_switch
-coroutine_switch:
+coroutine_switch:    
+
     # [*]直观理解：保存当前的状态到%rdi的context中，恢复%rsi的context
     # TODO: Task 1
     # 保存 callee-saved 寄存器到 %rdi 指向的上下文
@@ -29,8 +30,8 @@ coroutine_switch:
     movq %r13,  96(%rdi)
     movq %r14,  104(%rdi)
     movq %r15,  112(%rdi)
-    movq $.coroutine_ret , 120(%rdi)
-    # 疑问：这里使用rip真的没问题吗？
+    #movq $.coroutine_ret , 120(%rdi)
+
     movq (%rsi)   ,%rax 
     movq 8(%rsi)  ,%rdi 
     #movq 16(%rsi) ,%rsi 
@@ -48,6 +49,7 @@ coroutine_switch:
     movq 112(%rsi),%r15 
     # 是否需要保存部分寄存器？
     jmpq *120(%rsi)
-
+.global context_ret
+context_ret:
 .coroutine_ret:
     ret

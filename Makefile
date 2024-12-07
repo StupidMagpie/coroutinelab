@@ -6,7 +6,7 @@ FLAGS=-O2 -g -Iinc -pthread
 all: ${TARGETS}
 
 bin/%: src/%.cpp lib/context.S ${HEADERS}
-	g++ --std=c++17 -no-pie -fno-omit-frame-pointer $< lib/context.S ${FLAGS} -o $@
+	g++ --std=c++17 -fno-omit-frame-pointer $< lib/context.S ${FLAGS} -o $@
 
 clean:
 	rm -rf ${TARGETS}
