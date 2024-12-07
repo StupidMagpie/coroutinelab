@@ -89,31 +89,6 @@ struct coroutine_pool {
         count++;
       }
     }
-    /*
-    int count=0;
-    for(auto iter=coroutines.begin();iter!=coroutines.end();iter++){
-      auto context = *iter;
-      if(! context->finished){
-        if(context->ready){
-          //[*]每一个context都是一个指针
-          context_id = count;
-          context->resume();
-          // [*]是否需要从协程池中删除这个context?
-        }
-        else{
-          if(context->ready_func()){
-            context->ready=true;
-            context_id = count;
-            context->resume();
-          }
-        }
-      }
-      else{
-        printf("what?++++++++++++++++++++++++++++\n");
-      }
-      count++;
-    }
-    */
     for(auto context: coroutines){
       delete context;
     }
